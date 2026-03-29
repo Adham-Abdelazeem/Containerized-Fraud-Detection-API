@@ -31,7 +31,7 @@ jobs:
       # Step 6: Run the automated tests we wrote in test_main.py
       - name: Run Pytest
         run: |
-          pytest
+          python -m pytest
 
       # Step 7: Do a test build of the Docker container to ensure the Dockerfile isn't broken
       - name: Build Docker Image
