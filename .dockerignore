@@ -1,0 +1,12 @@
+Fraud/
+data/
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.csv
+train.py
+test_main.py
+*.md
+*.pdf
