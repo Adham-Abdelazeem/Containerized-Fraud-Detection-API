@@ -1,0 +1,3 @@
+-r requirements.txt   # ← pulls in everything above first
+pytest
+httpx

@@ -23,8 +23,8 @@ class Transaction(BaseModel):
     Amount: float
 
 # 4. Create the POST endpoint
-@app.post("/predict")
-def predict_fraud(transaction: Transaction):
+@app.post("/predict") # this is the endpoint - a decorator
+def predict_fraud(transaction: Transaction): # variable name : Type Hint
     # Convert the validated Pydantic object into a Python dictionary
     data_dict = transaction.model_dump()
     
@@ -43,3 +43,15 @@ def predict_fraud(transaction: Transaction):
         "is_fraud": bool(prediction[0]),
         "fraud_probability": round(float(probability), 4)
     }
+
+#I have:    a clean, validated Transaction object
+#I need:    a prediction from my sklearn model
+#sklearn expects:  a pandas DataFrame
+#I have:           a Pydantic object
+#So I need to:     Pydantic object → dict → DataFrame → model → result
+
+# this decoder is like 
+# def predict_fraud(transaction):
+#   #code here
+# Python passes the function directly into the decorator tool
+# predict_fraud = app.post("/predict")(predict_fraud)

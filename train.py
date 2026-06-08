@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import recall_score
 import joblib
 import os
 
@@ -23,9 +24,14 @@ print("3. Training the model...")
 model = LogisticRegression(max_iter=1000, class_weight='balanced')
 model.fit(X_train, y_train)
 
+# # Let's see how well it did (Accuracy isn't the best metric for fraud, but it's okay for now)
+# accuracy = model.score(X_test, y_test)
+# print(f"Model trained! Test Accuracy: {accuracy:.4f}")
+
 # Let's see how well it did (Accuracy isn't the best metric for fraud, but it's okay for now)
-accuracy = model.score(X_test, y_test)
-print(f"Model trained! Test Accuracy: {accuracy:.4f}")
+y_pred = model.predict(X_test)
+sensitivity = recall_score(y_test, y_pred)
+print(f"Model trained! Sensitivity (Fraud Recall): {sensitivity:.4f}")
 
 print("4. Saving (serializing) the model...")
 # Ensure the model directory exists
