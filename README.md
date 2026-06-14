@@ -12,12 +12,14 @@ Instead of just training a model in a Jupyter Notebook, this project demonstrate
 
 ## Tech Stack
 * **Machine Learning:** Scikit-learn, Pandas, Joblib
+* **Experiment Tracking:** MLflow (parameter logging, metric tracking, model registry)
 * **API Framework:** FastAPI, Uvicorn, Pydantic
 * **Containerization:** Docker
 * **CI/CD & Testing:** GitHub Actions, Pytest
 
 ## Architecture & Features
-1. **Model Training:** A Logistic Regression model trained on a highly imbalanced, real-world credit card fraud dataset.
+
+1. **Model Training with MLflow:** A Logistic Regression model trained on a highly imbalanced, real-world credit card fraud dataset. Training is wrapped in an MLflow run that logs hyperparameters (`max_iter`, `class_weight`), evaluation metrics (accuracy, precision, sensitivity/recall, F1), the model artifact (registered as `Logistic_Regression_Fraud_Registered`), and the inferred input/output signature — all visible in the MLflow UI at `http://localhost:5000`.
 2. **REST API:** A FastAPI endpoint (`/predict`) that accepts transaction features via JSON, validates the payload using Pydantic, and returns a fraud probability score.
 3. **Dockerized Environment:** The entire application is packaged into a lightweight Docker image, ensuring it runs identically across local machines and cloud servers without dependency conflicts.
 4. **Automated CI Pipeline:** Every push to the `main` branch triggers a GitHub Actions workflow that automatically runs unit tests and verifies the Docker build process.
