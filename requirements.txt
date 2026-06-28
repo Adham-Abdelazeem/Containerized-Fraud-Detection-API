@@ -3,3 +3,5 @@ pydantic
 pandas
 scikit-learn
 joblib
+mlflow
+feast
