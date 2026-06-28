@@ -1,3 +1,4 @@
+![CI Status](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions/workflows/ci.yml/badge.svg)
 # Containerized Fraud Detection API
 
 [![CI Pipeline](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions)

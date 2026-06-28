@@ -1,10 +1,25 @@
+import pytest
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient # built on top of pytest and allows us to test our FastAPI endpoints without running the server. It simulates HTTP requests to our API.
 from main import app
 
 # Create a fake client to send requests to our API without starting the server
 client = TestClient(app)
 
-def test_predict_endpoint():
+
+@pytest.fixture
+def client():
+    # Inject a fake mock model directly into the main module for testing
+    fake_model = MagicMock()
+    fake_model.predict.return_value = [0]
+    main.model = fake_model
+    
+    # Using TestClient as a context manager ensures lifespan events are skipped or handled
+    with TestClient(main.app) as ac:
+        yield ac
+
+
+def test_predict_endpoint(client):
     # 1. Define dummy data
     payload = {
         "V1": 0, "V2": 0, "V3": 0, "V4": 0, "V5": 0, "V6": 0, "V7": 0, "V8": 0, "V9": 0, "V10": 0,

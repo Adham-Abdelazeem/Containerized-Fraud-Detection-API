@@ -1,14 +1,29 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import mlflow
 
-# 1. Initialize the FastAPI app
-app = FastAPI(title="Fraud Detection API", description="API to predict fraudulent credit card transactions")
-mlflow.set_tracking_uri("http://localhost:5000")
-# 2. Load the trained model into memory
-# We do this outside the endpoint so it only loads ONCE when the server starts, not every time a request comes in.
-model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/2")
+
+# Keep the model container global but uninitialized
+model = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global model
+    # The model is loaded ONLY when the server starts up, not when imported
+    model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/2")
+    yield
+    # Clean up actions (if any) go here when the server shuts down
+
+app = FastAPI(lifespan=lifespan)
+
+# # 1. Initialize the FastAPI app
+# app = FastAPI(title="Fraud Detection API", description="API to predict fraudulent credit card transactions")
+# mlflow.set_tracking_uri("http://localhost:5000")
+# # 2. Load the trained model into memory
+# # We do this outside the endpoint so it only loads ONCE when the server starts, not every time a request comes in.
+# model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/2")
 
 # 3. Define the Pydantic data model (The Security Guard of our API)
 # This strictly defines what the incoming JSON must look like. 
