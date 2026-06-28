@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient # built on top of pytest and allows us to test our FastAPI endpoints without running the server. It simulates HTTP requests to our API.
-from main import app
+import main
 
 # Create a fake client to send requests to our API without starting the server
-client = TestClient(app)
+#client = TestClient(app)
 
 
 @pytest.fixture
