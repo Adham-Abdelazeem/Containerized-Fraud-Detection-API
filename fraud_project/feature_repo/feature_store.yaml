@@ -1,0 +1,66 @@
+project: fraud_project
+# By default, the registry is a file (but can be turned into a more scalable SQL-backed registry)
+
+
+registry: data/registry.db
+
+# registry could be like this as well 
+# registry:
+#   type: sql
+#   path: postgresql://user:pass@host:5432/feast    # PostgreSQL (team/staging)
+
+# registry: gs://my-bucket/registry.db             # Google Cloud Storage (production)
+# registry: s3://my-bucket/registry.db             # AWS S3 (production)
+# registry: azure://my-container/registry.db      # Azure Blob Storage (production)
+
+
+# The provider primarily specifies default offline / online stores & storing the registry in a given cloud
+provider: local # or could be gcp, aws, azure, databricks, etc.
+
+# this is where get_online_features will look for the features when we deploy our model
+online_store:
+    type: sqlite
+    path: data/online_store.db
+
+# or online_store could be like this as well
+# online_store:
+#   type: redis                     # production standard (~0.1ms lookups)
+#   connection_string: redis:6379
+
+# online_store:
+#   type: dynamodb                  # AWS production
+#   region: eu-west-1
+
+# online_store:
+#   type: bigtable                  # GCP production, massive scale
+#   project: my-gcp-project
+
+
+# offline_store is where get_historical_features will look for the features when we train our model
+# we don't have by default , as provider: local by default uses offline_store: file , but other options could be like this as well
+# offline_store:
+#   type: file              # reads local Parquet files (dev)
+
+# offline_store:
+#   type: bigquery          # GCP, handles terabytes
+#   dataset: feast_dataset
+
+# offline_store:
+#   type: redshift          # AWS
+#   cluster_id: my-cluster
+#   database: feast
+#   user: feast_user
+#   s3_staging_location: s3://my-bucket/staging
+
+# offline_store:
+#   type: snowflake         # multi-cloud DWH
+#   account: myaccount
+#   database: FEAST
+
+entity_key_serialization_version: 3
+
+
+
+# By default, no_auth for authentication and authorization, other possible values kubernetes and oidc. Refer the documentation for more details.
+auth:
+    type: no_auth

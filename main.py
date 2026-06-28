@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import joblib
 import pandas as pd
+import mlflow
 
 # 1. Initialize the FastAPI app
 app = FastAPI(title="Fraud Detection API", description="API to predict fraudulent credit card transactions")
-
+mlflow.set_tracking_uri("http://localhost:5000")
 # 2. Load the trained model into memory
 # We do this outside the endpoint so it only loads ONCE when the server starts, not every time a request comes in.
-model = joblib.load('model/fraud_model.joblib')
+model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/2")
 
 # 3. Define the Pydantic data model (The Security Guard of our API)
 # This strictly defines what the incoming JSON must look like. 

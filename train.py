@@ -108,8 +108,4 @@ with mlflow.start_run(run_name="Logistic Regression Fraud Model"):
     signature = infer_signature(X_test, y_pred)    
     mlflow.sklearn.log_model(model,name="Logistic_Regression_Fraud",registered_model_name="Logistic_Regression_Fraud_Registered", signature=signature)
 
-    # Also save the model to a local file (for our API to load)
-    print("6. Saving (serializing) the model locally...")
-    os.makedirs('model', exist_ok=True)
-    joblib.dump(model, 'model/fraud_model.joblib')
 
