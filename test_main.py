@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient # built on top of pytest and allows us to test our FastAPI endpoints without running the server. It simulates HTTP requests to our API.
 import main
 
@@ -9,14 +9,19 @@ import main
 
 @pytest.fixture
 def client():
-    # Inject a fake mock model directly into the main module for testing
-    fake_model = MagicMock()
-    fake_model.predict.return_value = [0]
-    main.model = fake_model
-    
-    # Using TestClient as a context manager ensures lifespan events are skipped or handled
-    with TestClient(main.app) as ac:
-        yield ac
+    # 1. Patch mlflow.sklearn.load_model BEFORE the lifespan executes
+    with patch("mlflow.sklearn.load_model") as mock_load:
+        # 2. Create a mock model that responds to .predict()
+        fake_model = MagicMock()
+        fake_model.predict.return_value = [0]  # Standard non-fraud return value
+        
+        # Tell the mock function to return our fake model
+        mock_load.return_value = fake_model
+        
+        # 3. Start the TestClient context manager. 
+        # This triggers the lifespan, which calls the mocked load_model() safely!
+        with TestClient(main.app) as ac:
+            yield ac
 
 
 def test_predict_endpoint(client):
