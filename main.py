@@ -10,9 +10,13 @@ model = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Set this to wherever your MLflow registry is hosted
+    mlflow.set_tracking_uri("http://127.0.0.1:5000") # Example: Local MLflow server
+    # OR mlflow.set_tracking_uri("sqlite:///mlflow.db") if using a local sqlite backend
+
     global model
     # The model is loaded ONLY when the server starts up, not when imported
-    model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/2")
+    model = mlflow.sklearn.load_model("models:/Logistic_Regression_Fraud_Registered/latest")
     yield
     # Clean up actions (if any) go here when the server shuts down
 

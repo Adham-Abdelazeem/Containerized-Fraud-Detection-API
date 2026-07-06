@@ -7,50 +7,12 @@ import joblib
 import mlflow
 import mlflow.sklearn
 import os , sys , io
+from feast import FeatureStore
 
 
 # Ensure that the output encoding is set to UTF-8 to avoid encoding issues in the terminal
 if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-# print("1. Loading the dataset...")
-# # Make sure your CSV is inside the 'data' folder
-# df = pd.read_csv('data/creditcard.csv')
-
-# # The Kaggle dataset has 'Class' as the target variable (1 = Fraud, 0 = Normal)
-# # We drop the 'Time' column as it's not very helpful for a simple model
-# X = df.drop(['Class', 'Time'], axis=1)
-# y = df['Class']
-
-# print("2. Splitting data into training and testing sets...")
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-# print("3. Training the model...")
-# # We use Logistic Regression here because it trains very fast. 
-# # Remember: Our goal is to build the API, not perfect the model!
-# # class_weight='balanced' helps deal with the fact that we have very few fraud cases.
-# model = LogisticRegression(max_iter=1000, class_weight='balanced')
-# model.fit(X_train, y_train)
-
-# # # Let's see how well it did (Accuracy isn't the best metric for fraud, but it's okay for now)
-# # accuracy = model.score(X_test, y_test)
-# # print(f"Model trained! Test Accuracy: {accuracy:.4f}")
-
-# # Let's see how well it did (Accuracy isn't the best metric for fraud, but it's okay for now)
-# y_pred = model.predict(X_test)
-# sensitivity = recall_score(y_test, y_pred)
-# print(f"Model trained! Sensitivity (Fraud Recall): {sensitivity:.4f}")
-
-# print("4. Saving (serializing) the model...")
-# # Ensure the model directory exists
-# os.makedirs('model', exist_ok=True)
-
-# # Save the model to a file
-# joblib.dump(model, 'model/fraud_model.joblib')
-
-# print("✅ Success! Model saved to model/fraud_model.joblib")
-
-# Building the same previous code but with MLflow tracking
 
 # Define the mlflow endpoint (where the tracking server is running)
 mlflow.set_tracking_uri("http://localhost:5000")
@@ -58,16 +20,29 @@ mlflow.set_tracking_uri("http://localhost:5000")
 # Set an MLflow experiment name (this groups runs together in the MLflow UI)
 mlflow.set_experiment("Fraud Detection Experiment")
 
-# Load the dataset
 print("1. Loading the dataset...")
 
-df = pd.read_csv('data/creditcard.csv')
+store = FeatureStore(repo_path="../feature_repo")
+
+# Load your labels (these never went into Feast)
+labels_df = pd.read_parquet("../feature_repo/data/labels.parquet")
 
 
-# The Kaggle dataset has 'Class' as the target variable (1 = Fraud, 0 = Normal)
-# We drop the 'Time' column as it's not very helpful for a simple model
-X = df.drop(['Class', 'Time'], axis=1)
-y = df['Class']
+training_df = store.get_historical_features(
+    entity_df=labels_df,        # has transaction_id + event_timestamp + Class
+    features=[
+        "transaction_features:V1",
+        "transaction_features:V2",
+        # ... all features
+        "transaction_features:Amount",
+    ],
+).to_df()
+
+
+
+# Features + label are now in one DataFrame
+X = training_df.drop(columns=["Class", "event_timestamp", "transaction_id"])
+y = training_df["Class"]
 
 # Split the data
 print("2. Splitting data into training and testing sets...")
