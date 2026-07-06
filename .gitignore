@@ -3,5 +3,4 @@ __pycache__/
 Fraud/
 .pytest_cache/
 *.joblib
-mlflow.db
-mlartifacts/
+fraudapi_env/

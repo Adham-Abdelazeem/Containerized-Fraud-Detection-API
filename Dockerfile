@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 5. Copy your API code and your trained model into the container
 # (The first '.' means your computer, the second '.' means the container)
 COPY main.py .
-COPY model/ ./model/
+#COPY model/ ./model/
 
 # 6. Tell Docker which port the container should listen on
 EXPOSE 8000
