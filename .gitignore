@@ -4,3 +4,5 @@ Fraud/
 .pytest_cache/
 *.joblib
 fraudapi_env/
+registry.db
+online_store.db

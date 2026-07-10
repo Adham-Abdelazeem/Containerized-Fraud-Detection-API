@@ -10,22 +10,20 @@ import os , sys , io
 from feast import FeatureStore
 
 
-# Ensure that the output encoding is set to UTF-8 to avoid encoding issues in the terminal
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# # Ensure that the output encoding is set to UTF-8 to avoid encoding issues in the terminal
+# if sys.stdout.encoding != 'utf-8':
+#     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# Define the mlflow endpoint (where the tracking server is running)
-mlflow.set_tracking_uri("http://localhost:5000")
+# # Define the mlflow endpoint (where the tracking server is running)
+# mlflow.set_tracking_uri("http://localhost:5000")
 
-# Set an MLflow experiment name (this groups runs together in the MLflow UI)
-mlflow.set_experiment("Fraud Detection Experiment")
 
 print("1. Loading the dataset...")
 
-store = FeatureStore(repo_path="../feature_repo")
+store = FeatureStore(repo_path="./feature_repo/feature_repo")
 
 # Load your labels (these never went into Feast)
-labels_df = pd.read_parquet("../feature_repo/data/labels.parquet")
+labels_df = pd.read_parquet("./feature_repo/feature_repo/data/labels.parquet")
 
 
 training_df = store.get_historical_features(
@@ -72,6 +70,9 @@ y = training_df["Class"]
 # Split the data
 print("2. Splitting data into training and testing sets...")
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Set an MLflow experiment name (this groups runs together in the MLflow UI)
+mlflow.set_experiment("Fraud Detection Experiment")
 
 # Start an MLflow run (this creates a new experiment run in the MLflow UI)
 with mlflow.start_run(run_name="Logistic Regression Fraud Model"):
