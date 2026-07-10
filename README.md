@@ -1,10 +1,3 @@
-# Containerized Fraud Detection API - Full Project Reference
-
----
-
-## 1. README.md
-
-```markdown
 # Containerized Fraud Detection API
 
 [![CI Pipeline](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions)
