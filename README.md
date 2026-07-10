@@ -1,95 +1,106 @@
+# Containerized Fraud Detection API - Full Project Reference
+
+---
+
+## 1. README.md
+
+```markdown
 # Containerized Fraud Detection API
 
 [![CI Pipeline](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API/actions)
 ![Python](https://img.shields.io/badge/Python-3.10-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking-blue.svg)
+![Feast](https://img.shields.io/badge/Feast-Feature_Store-orange.svg)
+![Docker](https://img.shields.io/badge/Docker-Hardened-blue.svg)
 
 ## Project Overview
 This project is an end-to-end Machine Learning API designed to predict fraudulent credit card transactions in real-time.
 
-Instead of just training a model in a Jupyter Notebook, this project demonstrates a complete **MLOps pipeline**. It takes a trained Scikit-Learn model, wraps it in a high-performance FastAPI server, containerizes the application using Docker for reproducible deployments, and utilizes GitHub Actions for Continuous Integration (CI).
+Instead of just training a model in a Jupyter Notebook, this project demonstrates a complete, production-grade **MLOps pipeline**. It integrates a **Feature Store** (Feast) for data management, an **Experiment Tracker and Model Registry** (MLflow), and a high-performance **FastAPI** serving layer, all wrapped in a security-hardened Docker container.
 
 ## Tech Stack
 * **Machine Learning:** Scikit-learn, Pandas, Joblib
-* **Experiment Tracking:** MLflow (parameter logging, metric tracking, model registry)
+* **Feature Store:** Feast (Historical offline training & SQLite online serving)
+* **Experiment Tracking & Registry:** MLflow (Parameter logging, metric tracking, model registry)
 * **API Framework:** FastAPI, Uvicorn, Pydantic
-* **Containerization:** Docker
+* **Containerization:** Docker (Multi-stage builds, non-root user execution)
 * **CI/CD & Testing:** GitHub Actions, Pytest
 
 ## Architecture & Features
 
-1. **Model Training with MLflow:** A Logistic Regression model trained on a highly imbalanced, real-world credit card fraud dataset. Training is wrapped in an MLflow run that logs hyperparameters (`max_iter`, `class_weight`), evaluation metrics (accuracy, precision, sensitivity/recall, F1), the model artifact (registered as `Logistic_Regression_Fraud_Registered`), and the inferred input/output signature — all visible in the MLflow UI at `http://localhost:5000`.
-2. **REST API:** A FastAPI endpoint (`/predict`) that accepts transaction features via JSON, validates the payload using Pydantic, and returns a fraud probability score.
-3. **Dockerized Environment:** The entire application is packaged into a lightweight Docker image, ensuring it runs identically across local machines and cloud servers without dependency conflicts.
-4. **Automated CI Pipeline:** Every push to the `main` branch triggers a GitHub Actions workflow that automatically runs unit tests and verifies the Docker build process.
+1. **Feature Store Integration (Feast):** Eliminates training-serving skew. The model trains on historical offline Parquet data, while the FastAPI server fetches ultra-low-latency features from a materialized SQLite online store using just a `transaction_id`.
+2. **Model Training & Registry (MLflow):** A Logistic Regression model trained on highly imbalanced credit card fraud data. Training runs log hyperparameters, evaluation metrics (accuracy, precision, recall, F1), and register the final model artifact to be automatically pulled by the serving layer.
+3. **Production-Ready REST API:** A FastAPI endpoint (`/predict`) that dynamically fetches features and returns a fraud probability score. It includes `/health` (liveness) and `/ready` (readiness) probes to ensure safe deployment in container orchestration systems (like Kubernetes or ECS).
+4. **Hardened Docker Environment:** The application is packaged using security best practices, utilizing a multi-stage build to reduce image size and running as a restricted, non-root user (`appuser`) to minimize attack surfaces.
 
 ---
 
-## How to Run Locally
+## The Full MLOps Lifecycle (How to Run Locally)
 
-### Option 1: Using Docker (Recommended)
-You do not need Python installed on your machine to run this, only Docker.
+Because this is a full MLOps pipeline, you must initialize the Feature Store and train the model before serving predictions. 
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API.git
-   cd Containerized-Fraud-Detection-API
-   ```
-2. **Build the Docker image:**
-   ```bash
-   docker build -t fraud-api .
-   ```
-3. **Run the container:**
-   ```bash
-   docker run -p 8000:8000 fraud-api
-   ```
-4. **Access the API:** Open your browser and navigate to `http://127.0.0.1:8000/docs` to use the interactive Swagger UI.
+### 1. Setup Environment
+Clone the repository and install dependencies:
+` ` `bash
+git clone [https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API.git](https://github.com/Adham-Abdelazeem/Containerized-Fraud-Detection-API.git)
+cd Containerized-Fraud-Detection-API
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+` ` `
 
-### Option 2: Using Python Virtual Environment
-1. Clone the repo and navigate to the directory.
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Start the server:
-   ```bash
-   fastapi dev main.py
-   ```
+### 2. Initialize the Feature Store (Feast)
+Create the physical SQLite database and materialize the offline Parquet data into the online store for fast retrieval:
+` ` `bash
+# 1. Create the infrastructure (online_store.db)
+feast -c ./feature_repo/feature_repo apply
+
+# 2. Push historical data to the online store
+python force_materialize.py
+` ` `
+
+### 3. Train & Register the Model (MLflow)
+Run the training script. This will pull historical features from Feast, train the Logistic Regression model, and register it in local MLflow:
+` ` `bash
+python train.py
+` ` `
+
+### 4. Start the API Server
+#### Option A: Using FastAPI directly
+` ` `bash
+uvicorn serving.main:app --host 0.0.0.0 --port 8000
+` ` `
+#### Option B: Using the Hardened Docker Container
+` ` `bash
+docker build -t fraud-api .
+docker run -p 8000:8000 fraud-api
+` ` `
 
 ---
 
 ## Example API Usage
 
-**Request:**
-```bash
-curl -X POST http://127.0.0.1:8000/predict \
+Because Feast handles feature retrieval dynamically, the client only needs to pass a `transaction_id`!
+
+**1. Check Server Readiness:**
+` ` `bash
+curl [http://127.0.0.1:8000/ready](http://127.0.0.1:8000/ready)
+` ` `
+*(Returns `{"status": "ready"}` when MLflow and Feast are fully loaded into memory).*
+
+**2. Make a Prediction:**
+` ` `bash
+curl -X POST [http://127.0.0.1:8000/predict](http://127.0.0.1:8000/predict) \
   -H "Content-Type: application/json" \
-  -d '{
-  "V1": -1.3, "V2": 0.2, "V3": 1.5, "V4": 0.4, "V5": -0.5,
-  "V6": 0.1, "V7": 0.2, "V8": 0.1, "V9": 0.8, "V10": -0.2,
-  "V11": 0.0, "V12": 0.5, "V13": -0.1, "V14": 0.3, "V15": 1.2,
-  "V16": 0.5, "V17": -0.4, "V18": 0.1, "V19": 0.2, "V20": 0.1,
-  "V21": -0.1, "V22": 0.2, "V23": -0.3, "V24": 0.4, "V25": 0.1,
-  "V26": 0.2, "V27": -0.1, "V28": 0.0,
-  "Amount": 150.00
-}'
-```
+  -d '{"transaction_id": 1001}'
+` ` `
 
 **Response:**
-```json
+` ` `json
 {
+  "transaction_id": 1001,
   "is_fraud": false,
   "fraud_probability": 0.0214
 }
-```
-
-## Future Improvements
-* Deploy the Docker container to a cloud provider (e.g., AWS AppRunner, Google Cloud Run, or Render).
-* Implement more advanced ML algorithms (e.g., XGBoost) and hyperparameter tuning to improve recall on fraudulent cases.
-* Add API key authentication for secure endpoint access.
+` ` `
