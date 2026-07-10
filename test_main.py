@@ -1,39 +1,66 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from contextlib import asynccontextmanager
-from fastapi.testclient import TestClient # built on top of pytest and allows us to test our FastAPI endpoints without running the server. It simulates HTTP requests to our API.
-import main
-from main import app, model
+from fastapi.testclient import TestClient
 
-# Create a fake client to send requests to our API without starting the server
-#client = TestClient(app)
+# Import your FastAPI app
+# (If main.py is inside a 'serving' folder, use: import serving.main as main)
+import main
 
 # 1. Create a completely empty lifespan context manager for tests
 @asynccontextmanager
 async def dummy_lifespan(app):
-    yield  # Skips execution of the real MLflow code entirely
+    yield  # Skips execution of the real MLflow and Feast loading entirely
 
 @pytest.fixture
 def client():
-    # 2. Create a mock model and directly inject it into the main module namespace
+    # 2. Create a mock MLflow model
+    # It must mock BOTH predict() and predict_proba() because your API uses both
     fake_model = MagicMock()
-    fake_model.predict.return_value = [0]  # Standard non-fraud output example
-    main.model = fake_model
+    fake_model.predict.return_value = [0]                 # Predicts: Not Fraud
+    fake_model.predict_proba.return_value = [[0.98, 0.02]] # 2% chance of fraud
+
+    # 3. Create a mock Feast Feature Store
+    fake_store = MagicMock()
     
-    # 3. Hijack FastAPI's internal router to use our dummy lifespan instead
+    # Create a dummy dictionary representing the 29 features Feast normally returns
+    mock_features = {f"V{i}": [0.0] for i in range(1, 29)}
+    mock_features["Amount"] = [100.50]
+    
+    # Chain the mocks so get_online_features().to_dict() returns our dummy data
+    mock_response = MagicMock()
+    mock_response.to_dict.return_value = mock_features
+    fake_store.get_online_features.return_value = mock_response
+
+    # 4. Inject both fakes into main.py's global dictionary
+    main.ml_components["model"] = fake_model
+    main.ml_components["store"] = fake_store
+    
+    # 5. Hijack FastAPI's internal router to use our dummy lifespan instead
     main.app.router.lifespan_context = dummy_lifespan
     
-    # 4. Spin up the client safely without hitting any external registries
+    # 6. Spin up the client safely without hitting any external databases
     with TestClient(main.app) as ac:
         yield ac
 
+# ==========================================
+# TESTS
+# ==========================================
+
+def test_health_check(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "healthy"}
+
+def test_ready_check(client):
+    response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
 
 def test_predict_endpoint(client):
-    # 1. Define dummy data
+    # 1. Define dummy data (Now it ONLY needs the transaction_id!)
     payload = {
-        "V1": 0, "V2": 0, "V3": 0, "V4": 0, "V5": 0, "V6": 0, "V7": 0, "V8": 0, "V9": 0, "V10": 0,
-        "V11": 0, "V12": 0, "V13": 0, "V14": 0, "V15": 0, "V16": 0, "V17": 0, "V18": 0, "V19": 0, "V20": 0,
-        "V21": 0, "V22": 0, "V23": 0, "V24": 0, "V25": 0, "V26": 0, "V27": 0, "V28": 0, "Amount": 100.50
+        "transaction_id": 1001
     }
     
     # 2. Send a POST request to the /predict endpoint
@@ -41,5 +68,12 @@ def test_predict_endpoint(client):
     
     # 3. Assert (verify) the results are what we expect
     assert response.status_code == 200
-    assert "is_fraud" in response.json()
-    assert "fraud_probability" in response.json()
+    data = response.json()
+    
+    assert data["transaction_id"] == 1001
+    assert "is_fraud" in data
+    assert "fraud_probability" in data
+    
+    # Verify the specific fake data we injected was used
+    assert data["is_fraud"] == False
+    assert data["fraud_probability"] == 0.02
